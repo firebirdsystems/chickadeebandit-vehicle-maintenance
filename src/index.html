@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Maintenance</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: var(--hub-bg, #f9fafb);
+      --surface: var(--hub-surface, #ffffff);
+      --border: var(--hub-border, #e5e7eb);
+      --border-mid: var(--hub-border, #d1d5db);
+      --text: var(--hub-text, #111827);
+      --muted: var(--hub-text-muted, #6b7280);
+      --accent: var(--hub-primary, #111827);
+      --accent-hover: var(--hub-primary-hover, #374151);
+      --accent-fg: var(--hub-primary-fg, #ffffff);
+      --radius: var(--hub-radius, 10px);
+      --green: #047857; --green-soft: #d1fae5;
+      --amber: #b45309; --amber-soft: #fef3c7;
+      --red: #b91c1c; --red-soft: #fee2e2;
+      --blue: #1d4ed8; --blue-soft: #dbeafe;
+      --shadow: 0 1px 3px rgba(15, 23, 42, .07);
+    }
+    body {
+      min-height: 100vh; background: var(--bg); color: var(--text);
+      font-family: var(--hub-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+      font-size: var(--hub-font-size, 15px); line-height: 1.5;
+    }
+    .app { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    h1 { font-size: 1.35rem; line-height: 1.2; }
+    h2 { font-size: .95rem; }
+    .muted { color: var(--muted); }
+    .tiny { font-size: .78rem; }
+    .stack { display: grid; gap: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border: 1px solid transparent; border-radius: 8px; padding: 8px 12px;
+      font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer;
+      min-height: 38px; background: var(--accent); color: var(--accent-fg);
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { opacity: .48; cursor: default; }
+    .btn-ghost { background: transparent; color: var(--text); border-color: var(--border-mid); }
+    .btn-ghost:hover { background: rgba(127,127,127,.08); }
+    .btn-danger { background: var(--red-soft); color: var(--red); }
+    .btn-sm { min-height: 31px; padding: 5px 10px; font-size: .78rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab {
+      border: 1px solid var(--border-mid); background: var(--surface); color: var(--text);
+      border-radius: 999px; padding: 5px 13px; font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer;
+    }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 18px 2px 8px; }
+    .row {
+      display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .row-icon { font-size: 1.15rem; width: 30px; text-align: center; flex-shrink: 0; }
+    .row-body { flex: 1; min-width: 0; }
+    .row-title { font-weight: 750; font-size: .92rem; }
+    .row-meta { color: var(--muted); font-size: .78rem; }
+    .row-side { flex-shrink: 0; text-align: right; display: grid; gap: 3px; justify-items: end; }
+    .pill {
+      display: inline-flex; align-items: center; min-height: 22px; padding: 1px 9px;
+      border-radius: 999px; white-space: nowrap; background: #f1f5f9; color: var(--muted);
+      font-size: .74rem; font-weight: 800;
+    }
+    .pill.soon { background: var(--red-soft); color: var(--red); }
+    .pill.week { background: var(--amber-soft); color: var(--amber); }
+    .pill.later { background: var(--blue-soft); color: var(--blue); }
+    .edit-link { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .76rem; font-weight: 700; padding: 2px 4px; }
+    .edit-link:hover { color: var(--text); text-decoration: underline; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+    .stat { display: grid; gap: 1px; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .stat .v { font-size: 1.02rem; font-weight: 800; }
+    .stat .k { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; }
+    .empty { color: var(--muted); text-align: center; padding: 30px 16px; }
+    .error { background: var(--red-soft); color: var(--red); padding: 9px 12px; border-radius: 8px; margin-bottom: 10px; font-size: .86rem; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.42); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal { background: var(--surface); border-radius: 14px; padding: 22px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,.25); max-height: 92vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.05rem; margin-bottom: 16px; }
+    .form { display: grid; gap: 12px; }
+    .field { display: grid; gap: 5px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 800; }
+    input, select, textarea {
+      width: 100%; border: 1.5px solid var(--border-mid); border-radius: 8px;
+      padding: 9px 11px; font: inherit; background: var(--surface); color: var(--text);
+    }
+    textarea { min-height: 56px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end; }
+    .modal-left { margin-right: auto; }
+    @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr; } }
+  </style>
+  <base href="/run/vehicle-maintenance/">
+</head>
+<body>
+<div class="app">
+  <div id="root" class="empty">Loading…</div>
+</div>
+
+<script type="module">
+import { esc, isAdult, hubConfirm, fmtMoney } from "/hub-sdk.js";
+import {
+  RENEWAL_KINDS, kindMeta, upcomingRenewals, countdownLabel, sortedLog,
+  totalCostCents, parseMoneyToCents, latestOdometer,
+} from "./logic.js";
+
+const CONTEXT = window.__CONTEXT_URL ?? "";
+const DB = window.__DB_URL ?? "";
+const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
+
+let members = [];
+let memberMap = new Map();
+let me = null;
+let vehicles = [];
+let serviceLog = [];
+let renewals = [];
+let currentVehicleId = null;
+let error = "";
+let modalEl = null;
+
+function nowIso() { return new Date().toISOString(); }
+function canManage() { return !!me && isAdult(me); }
+
+/* ── DB helper ─────────────────────────────────────────────────────────────── */
+async function db(sql, params = []) {
+  if (!DB) return { rows: [] };
+  const res = await fetch(DB, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+/* ── Loading ───────────────────────────────────────────────────────────────── */
+async function loadMembers() {
+  if (!CONTEXT) {
+    members = [{ id: "demo-1", name: "Alex", role: "adult" }, { id: "demo-2", name: "Casey", role: "child" }];
+  } else {
+    try {
+      const res = await fetch(`${CONTEXT}?keys=family.members`);
+      members = ((await res.json())["family.members"]) ?? [];
+    } catch { members = []; }
+  }
+  memberMap = new Map(members.map((m) => [m.id, m]));
+  me = HUB_MEMBER ?? members[0] ?? { id: "guest", name: "Guest", role: "adult" };
+}
+
+async function loadData() {
+  if (!DB) {
+    vehicles = [{ id: "v1", name: "Blue Subaru", make_model: "Subaru Outback", model_year: 2021, plate: "ABC-123", notes: "", archived: 0, created_by: "demo-1", created_at: nowIso() }];
+    serviceLog = [
+      { id: "s1", vehicle_id: "v1", service_date: "2026-05-14", title: "Oil change", odometer: 41200, cost_cents: 8900, notes: "", created_by: "demo-1", created_at: nowIso() },
+      { id: "s2", vehicle_id: "v1", service_date: "2026-02-02", title: "New tires", odometer: 38900, cost_cents: 74500, notes: "Michelin", created_by: "demo-1", created_at: nowIso() },
+    ];
+    renewals = [
+      { id: "r1", vehicle_id: "v1", member_id: "demo-1", kind: "registration", title: "Registration", event_month: 9, event_day: 30, lead_days: 14, visibility: "everyone", notes: "", last_reminded_at: null, created_at: nowIso(), updated_at: nowIso() },
+      { id: "r2", vehicle_id: "v1", member_id: "demo-1", kind: "inspection", title: "State inspection", event_month: 8, event_day: 1, lead_days: 14, visibility: "everyone", notes: "", last_reminded_at: null, created_at: nowIso(), updated_at: nowIso() },
+    ];
+    return;
+  }
+  const [v, s, r] = await Promise.all([
+    db("SELECT id, name, make_model, model_year, plate, notes, archived, created_by, created_at FROM app_vehicle_maintenance__vehicles WHERE archived = 0 ORDER BY created_at"),
+    db("SELECT id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at FROM app_vehicle_maintenance__service_log ORDER BY service_date DESC LIMIT 500"),
+    db("SELECT id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, last_reminded_at, created_at, updated_at FROM app_vehicle_maintenance__renewals"),
+  ]);
+  vehicles = v.rows ?? [];
+  serviceLog = s.rows ?? [];
+  renewals = r.rows ?? [];
+}
+
+async function refresh() {
+  error = "";
+  try {
+    await Promise.all([loadMembers(), loadData()]);
+    if (!currentVehicleId || !vehicles.some((v) => v.id === currentVehicleId)) currentVehicleId = vehicles[0]?.id ?? null;
+    render();
+  } catch (e) { error = e.message; render(); }
+}
+
+function showError(msg) { error = msg; render(); }
+
+/* ── Mutations ─────────────────────────────────────────────────────────────── */
+async function saveVehicle(fields, existingId) {
+  const now = nowIso();
+  if (existingId) {
+    const idx = vehicles.findIndex((v) => v.id === existingId);
+    const prev = idx !== -1 ? vehicles[idx] : null;
+    if (idx !== -1) vehicles[idx] = { ...vehicles[idx], ...fields };
+    closeModal(); render();
+    try {
+      await db("UPDATE app_vehicle_maintenance__vehicles SET name=?, make_model=?, model_year=?, plate=?, notes=? WHERE id=?",
+        [fields.name, fields.make_model, fields.model_year, fields.plate, fields.notes, existingId]);
+    } catch (e) { if (idx !== -1 && prev) vehicles[idx] = prev; showError(e.message); }
+  } else {
+    const row = { id: crypto.randomUUID(), ...fields, archived: 0, created_by: me.id, created_at: now };
+    vehicles = [...vehicles, row];
+    currentVehicleId = row.id;
+    closeModal(); render();
+    try {
+      await db("INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, plate, notes, archived, created_by, created_at) VALUES (?,?,?,?,?,?,0,?,?)",
+        [row.id, row.name, row.make_model, row.model_year, row.plate, row.notes, row.created_by, row.created_at]);
+    } catch (e) {
+      vehicles = vehicles.filter((v) => v.id !== row.id);
+      currentVehicleId = vehicles[0]?.id ?? null;
+      showError(e.message);
+    }
+  }
+}
+
+async function archiveVehicle(id) {
+  const ok = await hubConfirm({ message: "Archive this vehicle?", description: "Its log and renewals are hidden with it.", confirmLabel: "Archive", destructive: true });
+  if (!ok) return;
+  const prev = vehicles;
+  vehicles = vehicles.filter((v) => v.id !== id);
+  if (currentVehicleId === id) currentVehicleId = vehicles[0]?.id ?? null;
+  closeModal(); render();
+  try { await db("UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = ?", [id]); }
+  catch (e) { vehicles = prev; showError(e.message); }
+}
+
+async function saveService(fields, existingId) {
+  const now = nowIso();
+  if (existingId) {
+    const idx = serviceLog.findIndex((s) => s.id === existingId);
+    const prev = idx !== -1 ? serviceLog[idx] : null;
+    if (idx !== -1) serviceLog[idx] = { ...serviceLog[idx], ...fields };
+    closeModal(); render();
+    try {
+      await db("UPDATE app_vehicle_maintenance__service_log SET service_date=?, title=?, odometer=?, cost_cents=?, notes=? WHERE id=?",
+        [fields.service_date, fields.title, fields.odometer, fields.cost_cents, fields.notes, existingId]);
+    } catch (e) { if (idx !== -1 && prev) serviceLog[idx] = prev; showError(e.message); }
+  } else {
+    const row = { id: crypto.randomUUID(), vehicle_id: currentVehicleId, ...fields, created_by: me.id, created_at: now };
+    serviceLog = [row, ...serviceLog];
+    closeModal(); render();
+    try {
+      await db("INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        [row.id, row.vehicle_id, row.service_date, row.title, row.odometer, row.cost_cents, row.notes, row.created_by, row.created_at]);
+    } catch (e) { serviceLog = serviceLog.filter((s) => s.id !== row.id); showError(e.message); }
+  }
+}
+
+async function deleteService(id) {
+  const ok = await hubConfirm({ message: "Delete this service entry?", confirmLabel: "Delete", destructive: true });
+  if (!ok) return;
+  const prev = serviceLog;
+  serviceLog = serviceLog.filter((s) => s.id !== id);
+  closeModal(); render();
+  try { await db("DELETE FROM app_vehicle_maintenance__service_log WHERE id = ?", [id]); }
+  catch (e) { serviceLog = prev; showError(e.message); }
+}
+
+async function saveRenewal(fields, existingId) {
+  const now = nowIso();
+  if (existingId) {
+    const idx = renewals.findIndex((r) => r.id === existingId);
+    const prev = idx !== -1 ? renewals[idx] : null;
+    if (idx !== -1) renewals[idx] = { ...renewals[idx], ...fields, updated_at: now };
+    closeModal(); render();
+    try {
+      await db("UPDATE app_vehicle_maintenance__renewals SET kind=?, title=?, event_month=?, event_day=?, lead_days=?, notes=?, updated_at=? WHERE id=?",
+        [fields.kind, fields.title, fields.event_month, fields.event_day, fields.lead_days, fields.notes, now, existingId]);
+    } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; showError(e.message); }
+  } else {
+    const row = {
+      id: crypto.randomUUID(), vehicle_id: currentVehicleId, member_id: me.id,
+      visibility: "everyone", last_reminded_at: null, ...fields, created_at: now, updated_at: now,
+    };
+    renewals = [...renewals, row];
+    closeModal(); render();
+    try {
+      await db("INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [row.id, row.vehicle_id, row.member_id, row.kind, row.title, row.event_month, row.event_day, row.lead_days, row.visibility, row.notes, now, now]);
+    } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); showError(e.message); }
+  }
+}
+
+async function deleteRenewal(id) {
+  const ok = await hubConfirm({ message: "Delete this renewal reminder?", confirmLabel: "Delete", destructive: true });
+  if (!ok) return;
+  const prev = renewals;
+  renewals = renewals.filter((r) => r.id !== id);
+  closeModal(); render();
+  try { await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]); }
+  catch (e) { renewals = prev; showError(e.message); }
+}
+
+/* ── Rendering ─────────────────────────────────────────────────────────────── */
+function pillClass(days) {
+  if (days <= 7) return "soon";
+  if (days <= 30) return "week";
+  if (days <= 90) return "later";
+  return "";
+}
+
+function fmtServiceDate(d) {
+  const dt = new Date(`${d}T12:00:00`);
+  if (Number.isNaN(dt.getTime())) return d;
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(dt);
+}
+
+function render() {
+  const root = document.getElementById("root");
+  root.className = "app-root";
+
+  if (!vehicles.length) {
+    root.innerHTML = `
+      <div class="topbar"><h1>Vehicles</h1></div>
+      ${error ? `<div class="error">${esc(error)}</div>` : ""}
+      <div class="card empty">
+        No vehicles yet.${canManage() ? "" : " Ask an adult to add one."}
+        ${canManage() ? `<div style="margin-top:12px"><button class="btn" data-add-vehicle>+ Add a vehicle</button></div>` : ""}
+      </div>`;
+    return;
+  }
+
+  const vehicle = vehicles.find((v) => v.id === currentVehicleId) ?? vehicles[0];
+  const log = sortedLog(serviceLog.filter((s) => s.vehicle_id === vehicle.id));
+  const vRenewals = upcomingRenewals(renewals.filter((r) => r.vehicle_id === vehicle.id));
+  const odo = latestOdometer(log);
+  const spent = totalCostCents(log);
+
+  root.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>🚗 ${esc(vehicle.name)}</h1>
+        <p class="muted tiny">${esc([vehicle.make_model, vehicle.model_year, vehicle.plate].filter(Boolean).join(" · "))}</p>
+      </div>
+      ${canManage() ? `
+        <div style="display:flex; gap:6px">
+          <button class="btn btn-ghost btn-sm" data-edit-vehicle="${esc(vehicle.id)}">Edit</button>
+          <button class="btn btn-ghost btn-sm" data-add-vehicle>+ Vehicle</button>
+        </div>` : ""}
+    </div>
+    ${vehicles.length > 1 ? `<div class="tabs">${vehicles.map((v) => `<button class="tab ${v.id === vehicle.id ? "active" : ""}" data-vehicle="${esc(v.id)}">${esc(v.name)}</button>`).join("")}</div>` : ""}
+    ${error ? `<div class="error">${esc(error)}</div>` : ""}
+    <div class="stats">
+      <div class="stat"><span class="v">${odo != null ? esc(odo.toLocaleString()) : "—"}</span><span class="k">Odometer</span></div>
+      <div class="stat"><span class="v">${log.length}</span><span class="k">Services logged</span></div>
+      <div class="stat"><span class="v">${spent ? esc(fmtMoney(spent)) : "—"}</span><span class="k">Total spent</span></div>
+    </div>
+
+    <div class="section-head">
+      <h2>Renewals</h2>
+      ${canManage() ? `<button class="btn btn-ghost btn-sm" data-add-renewal>+ Renewal</button>` : ""}
+    </div>
+    ${vRenewals.length ? `<div class="stack">${vRenewals.map((r) => {
+      const meta = kindMeta(r.kind);
+      return `
+        <div class="row">
+          <div class="row-icon" aria-hidden="true">${meta.icon}</div>
+          <div class="row-body">
+            <div class="row-title">${esc(r.title || meta.label)}</div>
+            <div class="row-meta">${esc(meta.label)} · reminds ${esc(String(Number(r.lead_days) || 0))} days before${r.notes ? ` · ${esc(r.notes)}` : ""}</div>
+          </div>
+          <div class="row-side">
+            <span class="pill ${pillClass(r._days)}">${esc(countdownLabel(r._days))}</span>
+            ${canManage() ? `<button class="edit-link" data-edit-renewal="${esc(r.id)}">Edit</button>` : ""}
+          </div>
+        </div>`;
+    }).join("")}</div>` : `<div class="card empty tiny">No renewals tracked${canManage() ? " — add registration, inspection, or insurance dates" : ""}.</div>`}
+
+    <div class="section-head">
+      <h2>Service log</h2>
+      ${canManage() ? `<button class="btn btn-ghost btn-sm" data-add-service>+ Service</button>` : ""}
+    </div>
+    ${log.length ? `<div class="stack">${log.map((s) => `
+      <div class="row">
+        <div class="row-icon" aria-hidden="true">🔧</div>
+        <div class="row-body">
+          <div class="row-title">${esc(s.title)}</div>
+          <div class="row-meta">
+            ${esc(fmtServiceDate(s.service_date))}
+            ${s.odometer ? ` · ${esc(Number(s.odometer).toLocaleString())} mi` : ""}
+            ${s.notes ? ` · ${esc(s.notes)}` : ""}
+          </div>
+        </div>
+        <div class="row-side">
+          <span class="pill">${s.cost_cents != null ? esc(fmtMoney(Number(s.cost_cents))) : "—"}</span>
+          ${canManage() ? `<button class="edit-link" data-edit-service="${esc(s.id)}">Edit</button>` : ""}
+        </div>
+      </div>`).join("")}</div>` : `<div class="card empty tiny">No service history yet.</div>`}
+  `;
+}
+
+/* ── Modals ────────────────────────────────────────────────────────────────── */
+function openModal(html) {
+  closeModal();
+  modalEl = document.createElement("div");
+  modalEl.className = "overlay";
+  modalEl.innerHTML = `<div class="modal">${html}</div>`;
+  modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeModal(); });
+  document.body.appendChild(modalEl);
+}
+function closeModal() { modalEl?.remove(); modalEl = null; }
+
+function submitBtnBusy() {
+  const btn = modalEl?.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+}
+
+function openVehicleEditor(existing) {
+  const v = existing ?? null;
+  openModal(`
+    <h2>${v ? "Edit vehicle" : "Add a vehicle"}</h2>
+    <form class="form" id="vehicle-form">
+      <div class="field"><label for="v-name">Name</label><input id="v-name" data-autofocus value="${esc(v?.name ?? "")}" placeholder="Blue Subaru" required /></div>
+      <div class="grid2">
+        <div class="field"><label for="v-make">Make & model</label><input id="v-make" value="${esc(v?.make_model ?? "")}" placeholder="Subaru Outback" /></div>
+        <div class="field"><label for="v-year">Year</label><input id="v-year" type="number" min="1950" max="2100" value="${esc(v?.model_year ?? "")}" /></div>
+      </div>
+      <div class="field"><label for="v-plate">Plate <span class="muted" style="text-transform:none">(optional)</span></label><input id="v-plate" value="${esc(v?.plate ?? "")}" /></div>
+      <div class="field"><label for="v-notes">Notes</label><textarea id="v-notes">${esc(v?.notes ?? "")}</textarea></div>
+      <div class="modal-actions">
+        ${v ? `<button type="button" class="btn btn-danger modal-left" data-archive-vehicle="${esc(v.id)}">Archive</button>` : ""}
+        <button type="button" class="btn btn-ghost" data-cancel>Cancel</button>
+        <button type="submit" class="btn">${v ? "Save" : "Add"}</button>
+      </div>
+    </form>`);
+  modalEl.querySelector("[data-autofocus]")?.focus();
+  modalEl.querySelector("#vehicle-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = document.getElementById("v-name").value.trim();
+    if (!name) { document.getElementById("v-name").focus(); return; }
+    const yearRaw = document.getElementById("v-year").value;
+    submitBtnBusy();
+    saveVehicle({
+      name,
+      make_model: document.getElementById("v-make").value.trim(),
+      model_year: yearRaw ? Number(yearRaw) : null,
+      plate: document.getElementById("v-plate").value.trim(),
+      notes: document.getElementById("v-notes").value.trim(),
+    }, v?.id ?? null).catch((err) => showError(err.message));
+  });
+}
+
+function openServiceEditor(existing) {
+  const s = existing ?? null;
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  openModal(`
+    <h2>${s ? "Edit service" : "Log service"}</h2>
+    <form class="form" id="service-form">
+      <div class="field"><label for="s-title">What was done</label><input id="s-title" data-autofocus value="${esc(s?.title ?? "")}" placeholder="Oil change" required /></div>
+      <div class="grid2">
+        <div class="field"><label for="s-date">Date</label><input id="s-date" type="date" value="${esc(s?.service_date ?? todayIso)}" required /></div>
+        <div class="field"><label for="s-odo">Odometer</label><input id="s-odo" type="number" min="0" value="${esc(s?.odometer ?? "")}" /></div>
+      </div>
+      <div class="field"><label for="s-cost">Cost <span class="muted" style="text-transform:none">(optional)</span></label><input id="s-cost" inputmode="decimal" value="${s?.cost_cents != null ? esc((Number(s.cost_cents) / 100).toFixed(2)) : ""}" placeholder="89.00" /></div>
+      <div class="field"><label for="s-notes">Notes</label><textarea id="s-notes">${esc(s?.notes ?? "")}</textarea></div>
+      <div class="modal-actions">
+        ${s ? `<button type="button" class="btn btn-danger modal-left" data-delete-service="${esc(s.id)}">Delete</button>` : ""}
+        <button type="button" class="btn btn-ghost" data-cancel>Cancel</button>
+        <button type="submit" class="btn">${s ? "Save" : "Log it"}</button>
+      </div>
+    </form>`);
+  modalEl.querySelector("[data-autofocus]")?.focus();
+  modalEl.querySelector("#service-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = document.getElementById("s-title").value.trim();
+    const date = document.getElementById("s-date").value;
+    if (!title) { document.getElementById("s-title").focus(); return; }
+    if (!date) { document.getElementById("s-date").focus(); return; }
+    const costRaw = document.getElementById("s-cost").value.trim();
+    const cost = parseMoneyToCents(costRaw);
+    if (costRaw && cost == null) { showError("Cost must be a dollar amount like 89 or 89.50."); return; }
+    const odoRaw = document.getElementById("s-odo").value;
+    submitBtnBusy();
+    saveService({
+      service_date: date,
+      title,
+      odometer: odoRaw ? Number(odoRaw) : null,
+      cost_cents: cost,
+      notes: document.getElementById("s-notes").value.trim(),
+    }, s?.id ?? null).catch((err) => showError(err.message));
+  });
+}
+
+function openRenewalEditor(existing) {
+  const r = existing ?? null;
+  const kindOptions = RENEWAL_KINDS.map((k) => `<option value="${k.value}" ${r?.kind === k.value ? "selected" : ""}>${k.icon} ${k.label}</option>`).join("");
+  const dateVal = r ? `2000-${String(Number(r.event_month)).padStart(2, "0")}-${String(Number(r.event_day)).padStart(2, "0")}` : "";
+  openModal(`
+    <h2>${r ? "Edit renewal" : "Add renewal reminder"}</h2>
+    <form class="form" id="renewal-form">
+      <div class="field"><label for="r-title">Title</label><input id="r-title" data-autofocus value="${esc(r?.title ?? "")}" placeholder="Registration" required /></div>
+      <div class="grid2">
+        <div class="field"><label for="r-kind">Type</label><select id="r-kind">${kindOptions}</select></div>
+        <div class="field"><label for="r-date">Renews every year on</label><input id="r-date" type="date" value="${esc(dateVal)}" required /><span class="tiny muted">Only the month and day are used.</span></div>
+      </div>
+      <div class="field"><label for="r-lead">Email reminder</label>
+        <select id="r-lead">
+          ${[0, 3, 7, 14, 30].map((d) => `<option value="${d}" ${Number(r?.lead_days ?? 14) === d ? "selected" : ""}>${d === 0 ? "On the day" : `${d} days before`}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label for="r-notes">Notes</label><textarea id="r-notes">${esc(r?.notes ?? "")}</textarea></div>
+      <div class="modal-actions">
+        ${r ? `<button type="button" class="btn btn-danger modal-left" data-delete-renewal="${esc(r.id)}">Delete</button>` : ""}
+        <button type="button" class="btn btn-ghost" data-cancel>Cancel</button>
+        <button type="submit" class="btn">${r ? "Save" : "Add"}</button>
+      </div>
+    </form>`);
+  modalEl.querySelector("[data-autofocus]")?.focus();
+  modalEl.querySelector("#renewal-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = document.getElementById("r-title").value.trim();
+    const dateStr = document.getElementById("r-date").value;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!title) { document.getElementById("r-title").focus(); return; }
+    if (!m) { document.getElementById("r-date").focus(); return; }
+    submitBtnBusy();
+    saveRenewal({
+      kind: document.getElementById("r-kind").value,
+      title,
+      event_month: Number(m[2]),
+      event_day: Number(m[3]),
+      lead_days: Number(document.getElementById("r-lead").value) || 0,
+      notes: document.getElementById("r-notes").value.trim(),
+    }, r?.id ?? null).catch((err) => showError(err.message));
+  });
+}
+
+/* ── Events ────────────────────────────────────────────────────────────────── */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.hasAttribute("data-vehicle")) { currentVehicleId = t.getAttribute("data-vehicle"); render(); return; }
+  if (t.hasAttribute("data-cancel")) { closeModal(); return; }
+  if (t.hasAttribute("data-add-vehicle")) { openVehicleEditor(null); return; }
+  if (t.hasAttribute("data-edit-vehicle")) { openVehicleEditor(vehicles.find((v) => v.id === t.getAttribute("data-edit-vehicle"))); return; }
+  if (t.hasAttribute("data-archive-vehicle")) { archiveVehicle(t.getAttribute("data-archive-vehicle")); return; }
+  if (t.hasAttribute("data-add-service")) { openServiceEditor(null); return; }
+  if (t.hasAttribute("data-edit-service")) { openServiceEditor(serviceLog.find((s) => s.id === t.getAttribute("data-edit-service"))); return; }
+  if (t.hasAttribute("data-delete-service")) { deleteService(t.getAttribute("data-delete-service")); return; }
+  if (t.hasAttribute("data-add-renewal")) { openRenewalEditor(null); return; }
+  if (t.hasAttribute("data-edit-renewal")) { openRenewalEditor(renewals.find((r) => r.id === t.getAttribute("data-edit-renewal"))); return; }
+  if (t.hasAttribute("data-delete-renewal")) { deleteRenewal(t.getAttribute("data-delete-renewal")); return; }
+});
+
+refresh();
+</script>
+</body>
+</html>

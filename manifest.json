@@ -1,0 +1,54 @@
+{
+  "id": "vehicle-maintenance",
+  "name": "Vehicle Maintenance",
+  "version": "1.0.0",
+  "description": "Keep every household vehicle road-legal and maintained: a service log with costs and odometer readings, plus annual renewal reminders for registration, inspection, and insurance.",
+  "entrypoint": "index.html",
+  "runtime": "static",
+  "category": "family",
+  "tags": ["car", "vehicle", "maintenance", "registration", "inspection", "reminders"],
+  "icon": "🚗",
+  "data_access": {
+    "reads": ["family.members"],
+    "writes": []
+  },
+  "permissions": {
+    "default_audience": "everyone",
+    "requires_approval": false
+  },
+  "storage": "db",
+  "db_plaintext_columns": ["kind", "service_date"],
+  "row_policies": {
+    "vehicles": {
+      "kind": "adult_writable"
+    },
+    "service_log": {
+      "kind": "adult_writable"
+    },
+    "renewals": {
+      "kind": "adult_writable"
+    }
+  },
+  "required_capabilities": ["cron", "email"],
+  "date_reminders": {
+    "table": "renewals",
+    "month_column": "event_month",
+    "day_column": "event_day",
+    "lead_days_column": "lead_days",
+    "title_column": "title",
+    "kind_column": "kind",
+    "owner_column": "member_id",
+    "visibility_column": "visibility",
+    "everyone_values": ["everyone"],
+    "last_reminded_column": "last_reminded_at"
+  },
+  "nav": { "label": "Vehicles" },
+  "resource_limits": {
+    "max_db_bytes": 52428800
+  },
+  "ai_access": {
+    "allowed": true,
+    "mode": "read",
+    "db_exports": ["vehicles", "recent_service", "upcoming_renewals"]
+  }
+}
