@@ -17,7 +17,7 @@
     "requires_approval": false
   },
   "storage": "db",
-  "db_plaintext_columns": ["kind", "service_date"],
+  "db_plaintext_columns": ["kind", "service_date", "event_month", "event_day", "lead_days"],
   "row_policies": {
     "vehicles": {
       "kind": "adult_writable"
