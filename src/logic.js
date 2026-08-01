@@ -93,3 +93,12 @@ export function latestOdometer(log) {
   const vals = log.map((e) => Number(e.odometer)).filter((n) => Number.isFinite(n) && n > 0);
   return vals.length ? Math.max(...vals) : null;
 }
+
+/**
+ * Fields the in-app search matches against (see hub-sdk `searchMatch`).
+ * The notes count as well as the service title — "which garage did
+ * the brakes" is written in the notes of a service entry.
+ */
+export function searchableFields(item) {
+  return [item.title, item.notes, item.service_date];
+}

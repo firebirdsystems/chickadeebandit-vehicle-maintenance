@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   kindMeta, daysInMonth, nextOccurrence, daysUntil, countdownLabel,
-  upcomingRenewals, sortedLog, totalCostCents, parseMoneyToCents, latestOdometer,
+  upcomingRenewals, sortedLog, totalCostCents, parseMoneyToCents, latestOdometer, searchableFields,
 } from "../src/logic.js";
 
 const FROM = new Date(2026, 6, 12, 9, 0, 0); // July 12, 2026 local
@@ -82,4 +82,11 @@ describe("latestOdometer", () => {
 
 describe("kindMeta", () => {
   it("falls back to other", () => expect(kindMeta("bogus").value).toBe("other"));
+});
+
+describe("searchableFields", () => {
+  it("matches on the service notes, not just the entry title", () => {
+    const fields = searchableFields({ title: "Brake pads", notes: "Halfords, front only", service_date: "2026-03-04" });
+    expect(fields).toContain("Halfords, front only");
+  });
 });

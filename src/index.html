@@ -96,6 +96,13 @@
     .modal-actions { display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end; }
     .modal-left { margin-right: auto; }
     @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr 1fr; } }
+    .search-row { margin-bottom: 12px; }
+    .search-input {
+      width: 100%; border: 1.5px solid var(--border-mid, var(--border, #d1d5db));
+      border-radius: 8px; padding: 9px 11px; font: inherit;
+      background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
   </style>
   <base href="/run/vehicle-maintenance/">
 </head>
@@ -105,10 +112,10 @@
 </div>
 
 <script type="module">
-import { esc, isAdult, hubConfirm, fmtMoney } from "/hub-sdk.js";
+import { esc, isAdult, hubConfirm, fmtMoney, searchMatch } from "/hub-sdk.js";
 import {
   RENEWAL_KINDS, kindMeta, upcomingRenewals, countdownLabel, sortedLog,
-  totalCostCents, parseMoneyToCents, latestOdometer,
+  totalCostCents, parseMoneyToCents, latestOdometer, searchableFields,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -122,6 +129,7 @@ let vehicles = [];
 let serviceLog = [];
 let renewals = [];
 let currentVehicleId = null;
+let searchQ = "";       // in-app search (see logic.js searchableFields)
 let error = "";
 let modalEl = null;
 
@@ -309,6 +317,16 @@ function fmtServiceDate(d) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(dt);
 }
 
+// render() rewrites the whole view, so put the caret back after a keystroke.
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "search") return;
+  searchQ = e.target.value;
+  const caret = e.target.selectionStart;
+  render();
+  const next = document.getElementById("search");
+  if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+});
+
 function render() {
   const root = document.getElementById("root");
   root.className = "app-root";
@@ -326,6 +344,7 @@ function render() {
 
   const vehicle = vehicles.find((v) => v.id === currentVehicleId) ?? vehicles[0];
   const log = sortedLog(serviceLog.filter((s) => s.vehicle_id === vehicle.id));
+  const shownLog = searchQ ? log.filter((s) => searchMatch(searchQ, searchableFields(s))) : log;
   const vRenewals = upcomingRenewals(renewals.filter((r) => r.vehicle_id === vehicle.id));
   const odo = latestOdometer(log);
   const spent = totalCostCents(log);
@@ -374,7 +393,8 @@ function render() {
       <h2>Service log</h2>
       ${canManage() ? `<button class="btn btn-ghost btn-sm" data-add-service>+ Service</button>` : ""}
     </div>
-    ${log.length ? `<div class="stack">${log.map((s) => `
+    ${log.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search the service log…" aria-label="Search the service log" value="${esc(searchQ)}" /></div>` : ""}
+    ${shownLog.length ? `<div class="stack">${shownLog.map((s) => `
       <div class="row">
         <div class="row-icon" aria-hidden="true">🔧</div>
         <div class="row-body">
@@ -389,7 +409,7 @@ function render() {
           <span class="pill">${s.cost_cents != null ? esc(fmtMoney(Number(s.cost_cents))) : "—"}</span>
           ${canManage() ? `<button class="edit-link" data-edit-service="${esc(s.id)}">Edit</button>` : ""}
         </div>
-      </div>`).join("")}</div>` : `<div class="card empty tiny">No service history yet.</div>`}
+      </div>`).join("")}</div>` : `<div class="card empty tiny">${searchQ ? `No service entries match "${esc(searchQ)}".` : "No service history yet."}</div>`}
   `;
 }
 
