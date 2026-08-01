@@ -18,6 +18,20 @@
   },
   "storage": "db",
   "db_plaintext_columns": ["kind", "service_date", "event_month", "event_day", "lead_days"],
+    "member_references": {
+      "vehicles": {
+        "column": "created_by",
+        "on_removed": "keep"
+      },
+      "service_log": {
+        "column": "created_by",
+        "on_removed": "keep"
+      },
+      "renewals": {
+        "column": "member_id",
+        "on_removed": "keep"
+      }
+    },
   "row_policies": {
     "vehicles": {
       "kind": "adult_writable"
