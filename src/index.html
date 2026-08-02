@@ -121,6 +121,21 @@ import {
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB = window.__DB_URL ?? "";
 const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
+const EVENTS = window.__EVENTS_URL ?? "";
+
+async function publishEvent(type, subjectId, payload = {}) {
+  if (!EVENTS) return;
+  try {
+    await fetch(EVENTS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, subject_id: subjectId, payload }),
+    });
+  } catch {
+    // The row is already written and rendered; a failed publish must not
+    // roll the optimistic update back.
+  }
+}
 
 let members = [];
 let memberMap = new Map();
@@ -254,6 +269,12 @@ async function saveService(fields, existingId) {
     try {
       await db("INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
         [row.id, row.vehicle_id, row.service_date, row.title, row.odometer, row.cost_cents, row.notes, row.created_by, row.created_at]);
+      await publishEvent("vehicle.service_logged", row.id, {
+        vehicle_id: row.vehicle_id,
+        service_date: row.service_date,
+        odometer: row.odometer,
+        cost_cents: row.cost_cents,
+      });
     } catch (e) { serviceLog = serviceLog.filter((s) => s.id !== row.id); showError(e.message); }
   }
 }
@@ -289,6 +310,13 @@ async function saveRenewal(fields, existingId) {
     try {
       await db("INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [row.id, row.vehicle_id, row.member_id, row.kind, row.title, row.event_month, row.event_day, row.lead_days, row.visibility, row.notes, now, now]);
+      await publishEvent("vehicle.renewal_added", row.id, {
+        vehicle_id: row.vehicle_id,
+        member_id: row.member_id,
+        kind: row.kind,
+        event_month: row.event_month,
+        event_day: row.event_day,
+      });
     } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); showError(e.message); }
   }
 }

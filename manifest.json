@@ -56,7 +56,27 @@
     "everyone_values": ["everyone"],
     "last_reminded_column": "last_reminded_at"
   },
+  "publishes": ["vehicle.service_logged", "vehicle.renewal_added"],
+  "publish_acls": {
+    "vehicle.service_logged": { "require_role": "adult" },
+    "vehicle.renewal_added": { "require_role": "adult" }
+  },
   "nav": { "label": "Vehicles" },
+  "agenda": {
+    "kind": "event",
+    "label": "Vehicle",
+    "source": {
+      "kind": "sql",
+      "query": "SELECT id AS id, title AS title, kind AS subtitle, member_id AS member_id, :today AS when_at FROM app_vehicle_maintenance__renewals WHERE event_month = CAST(strftime('%m', :today) AS INTEGER) AND event_day = CAST(strftime('%d', :today) AS INTEGER) LIMIT 20"
+    }
+  },
+  "glance": {
+    "source": {
+      "kind": "sql",
+      "query": "SELECT title AS title, kind AS subtitle, member_id AS member_id, CASE WHEN printf('%02d-%02d', event_month, event_day) >= substr(:today, 6, 5) THEN printf('%04d-%02d-%02d', CAST(substr(:today, 1, 4) AS INTEGER), event_month, event_day) ELSE printf('%04d-%02d-%02d', CAST(substr(:today, 1, 4) AS INTEGER) + 1, event_month, event_day) END AS at FROM app_vehicle_maintenance__renewals ORDER BY at LIMIT 3"
+    },
+    "display": { "template": "list", "title": "title", "subtitle": "subtitle", "when": "at", "owner": "member_id" }
+  },
   "resource_limits": {
     "max_db_bytes": 52428800
   },
