@@ -17,6 +17,11 @@
     "requires_approval": false
   },
   "storage": "db",
+  "preload": {
+    "vehicles": {"sql": "SELECT id, name, make_model, model_year, plate, notes, archived, created_by, created_at FROM app_vehicle_maintenance__vehicles WHERE archived = 0 ORDER BY created_at"},
+    "service_log": {"sql": "SELECT id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at FROM app_vehicle_maintenance__service_log ORDER BY service_date DESC LIMIT 500"},
+    "renewals": {"sql": "SELECT id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, last_reminded_at, created_at, updated_at FROM app_vehicle_maintenance__renewals"}
+  },
   "db_plaintext_columns": ["kind", "service_date", "event_month", "event_day", "lead_days"],
     "member_references": {
       "vehicles": {
