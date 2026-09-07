@@ -61,11 +61,37 @@
     "everyone_values": ["everyone"],
     "last_reminded_column": "last_reminded_at"
   },
-  "publishes": ["vehicle.service_logged", "vehicle.renewal_added"],
+  "publishes": ["vehicle.service_logged", "vehicle.renewal_added", "vehicle.renewal_cancelled"],
   "publish_acls": {
     "vehicle.service_logged": { "require_role": "adult" },
-    "vehicle.renewal_added": { "require_role": "adult" }
+    "vehicle.renewal_added": { "require_role": "adult" },
+    "vehicle.renewal_cancelled": { "require_role": "adult" }
   },
+  "suggested_automations": [
+    {
+      "title": "Put every vehicle renewal on the household calendar",
+      "description": "When a registration, inspection, or insurance renewal is added or its date is changed, put an all-day calendar event on the reminder day — two weeks before it is due, by default. The renewal list here stores only a month and a day; this projects the next actual date so it shows up in the month view and in the calendar feed the household already subscribes to. Editing the date moves the entry that is already there instead of adding a second one.",
+      "trigger_event": "vehicle.renewal_added",
+      "target_app_id": "calendar",
+      "action_id": "create_event",
+      "param_map": {
+        "title": { "kind": "payload_field", "value": "review_title" },
+        "event_date": { "kind": "payload_field", "value": "remind_on" },
+        "description": { "kind": "payload_field", "value": "summary" },
+        "source_ref_id": { "kind": "payload_field", "value": "source_ref_id" }
+      }
+    },
+    {
+      "title": "Take a vehicle renewal back off the calendar",
+      "description": "The other half of the rule above, and it does nothing without it. When a renewal is deleted, or the vehicle it belongs to is archived, the calendar entry it put there stops showing — instead of standing for years as a registration for a car the household no longer owns. Add both, or the entry outlives the vehicle.",
+      "trigger_event": "vehicle.renewal_cancelled",
+      "target_app_id": "calendar",
+      "action_id": "retract_dated_event",
+      "param_map": {
+        "source_ref_id": { "kind": "payload_field", "value": "source_ref_id" }
+      }
+    }
+  ],
   "nav": { "label": "Vehicles" },
   "agenda": {
     "kind": "event",

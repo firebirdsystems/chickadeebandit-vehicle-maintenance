@@ -127,6 +127,7 @@ const hubDay = () => new Date(`${hubToday()}T12:00:00`);
 import {
   RENEWAL_KINDS, kindMeta, upcomingRenewals, countdownLabel, sortedLog,
   totalCostCents, parseMoneyToCents, latestOdometer, searchableFields,
+  nextRenewalDate, remindOnDate, renewalReviewTitle, renewalSummary, renewalInputsChanged,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -258,8 +259,13 @@ async function archiveVehicle(id) {
   vehicles = vehicles.filter((v) => v.id !== id);
   if (currentVehicleId === id) currentVehicleId = vehicles[0]?.id ?? null;
   closeModal(); render();
-  try { await db("UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = ?", [id]); }
-  catch (e) { vehicles = prev; showError(e.message); }
+  try {
+    await db("UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = ?", [id]);
+    // Archiving hides the vehicle's renewals here, but a calendar entry lives in
+    // another app and would keep showing a registration for a car the household
+    // no longer has. Retract each one by the reference that made it.
+    for (const r of renewals.filter((r) => r.vehicle_id === id)) await retractRenewal(r, "vehicle_archived");
+  } catch (e) { vehicles = prev; showError(e.message); }
 }
 
 async function saveService(fields, existingId) {
@@ -300,6 +306,72 @@ async function deleteService(id) {
   catch (e) { serviceLog = prev; showError(e.message); }
 }
 
+/**
+ * Announce a renewal so an automation rule can act on it — the shipped
+ * suggestion turns this into an all-day calendar entry on `remind_on`.
+ *
+ * This is a SEPARATE lane from `date_reminders`, which stays exactly as it is:
+ * that one is the hub's cron sending an email, this one is the household's
+ * calendar and the ICS feed Google/Apple subscribe to. A household can have
+ * either, both, or neither.
+ *
+ * The renewals table stores a month and a day, never a year, so the payload the
+ * app used to publish could not drive a calendar entry at all — `create_event`
+ * requires a full yyyy-mm-dd. The projection happens here, against the
+ * HOUSEHOLD's day, and the publish is skipped entirely when it comes back null:
+ * a blank `event_date` reaches the automation runner as `missing required
+ * param` and fails the run rather than doing nothing.
+ *
+ * Every publish carries the same `source_ref_id`, and the calendar's
+ * `create_event` conflicts on it, so re-announcing MOVES the entry already on
+ * the calendar instead of adding a second beside it. The event id is fresh on
+ * every publish and could only ever say "this is a new event", never "this is
+ * the same renewal as last time".
+ */
+async function announceRenewal(row) {
+  const renewalDate = nextRenewalDate(row.event_month, row.event_day, hubToday());
+  if (!renewalDate) return;
+  const remindOn = remindOnDate(renewalDate, row.lead_days, hubToday());
+  if (!remindOn) return;
+  const vehicleName = vehicles.find((v) => v.id === row.vehicle_id)?.name ?? "";
+  await publishEvent("vehicle.renewal_added", row.id, {
+    // Steady identity for the calendar entry this becomes, namespaced by app
+    // because the key shares one column with every other publisher's.
+    source_ref_id: `vehicle-maintenance:${row.id}`,
+    vehicle_id: row.vehicle_id,
+    member_id: row.member_id,
+    kind: row.kind,
+    title: row.title,
+    event_month: row.event_month,
+    event_day: row.event_day,
+    renewal_date: renewalDate,
+    remind_on: remindOn,
+    review_title: renewalReviewTitle(row),
+    summary: renewalSummary(row, vehicleName, renewalDate),
+  });
+}
+
+/**
+ * Say the entry no longer applies, so a rule can take it back off the calendar.
+ * Carries the SAME source_ref_id the announcement used — that is the whole
+ * mechanism; the calendar's retraction is scoped by it and a mismatch would
+ * silently retract nothing.
+ *
+ * Deliberately NOT symmetric with announcing. Announcing is idempotent, so
+ * re-announcing is cheap; a retraction is published only on a real transition
+ * out of having an entry (deleted, or its vehicle archived), because one that
+ * fired on every save would spend an automation run per typo fix to update zero
+ * rows, and rules are rate limited per day.
+ */
+async function retractRenewal(row, reason) {
+  await publishEvent("vehicle.renewal_cancelled", row.id, {
+    source_ref_id: `vehicle-maintenance:${row.id}`,
+    vehicle_id: row.vehicle_id,
+    title: row.title,
+    reason,
+  });
+}
+
 async function saveRenewal(fields, existingId) {
   const now = nowIso();
   if (existingId) {
@@ -310,6 +382,11 @@ async function saveRenewal(fields, existingId) {
     try {
       await db("UPDATE app_vehicle_maintenance__renewals SET kind=?, title=?, event_month=?, event_day=?, lead_days=?, notes=?, updated_at=? WHERE id=?",
         [fields.kind, fields.title, fields.event_month, fields.event_day, fields.lead_days, fields.notes, now, existingId]);
+      // Editing used to publish nothing, so moving a renewal from March to
+      // September left last March's entry standing on the calendar with nothing
+      // able to correct it. The guard keeps a notes-only edit from spending an
+      // automation run to rewrite an entry it cannot change.
+      if (idx !== -1 && renewalInputsChanged(prev, renewals[idx])) await announceRenewal(renewals[idx]);
     } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; showError(e.message); }
   } else {
     const row = {
@@ -321,13 +398,7 @@ async function saveRenewal(fields, existingId) {
     try {
       await db("INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [row.id, row.vehicle_id, row.member_id, row.kind, row.title, row.event_month, row.event_day, row.lead_days, row.visibility, row.notes, now, now]);
-      await publishEvent("vehicle.renewal_added", row.id, {
-        vehicle_id: row.vehicle_id,
-        member_id: row.member_id,
-        kind: row.kind,
-        event_month: row.event_month,
-        event_day: row.event_day,
-      });
+      await announceRenewal(row);
     } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); showError(e.message); }
   }
 }
@@ -338,8 +409,11 @@ async function deleteRenewal(id) {
   const prev = renewals;
   renewals = renewals.filter((r) => r.id !== id);
   closeModal(); render();
-  try { await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]); }
-  catch (e) { renewals = prev; showError(e.message); }
+  const doomed = prev.find((r) => r.id === id);
+  try {
+    await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]);
+    if (doomed) await retractRenewal(doomed, "deleted");
+  } catch (e) { renewals = prev; showError(e.message); }
 }
 
 /* ── Rendering ─────────────────────────────────────────────────────────────── */
