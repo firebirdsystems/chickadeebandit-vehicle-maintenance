@@ -1,5 +1,7 @@
 # Vehicle Maintenance
 
+A [Chickadee Bandit](https://chickadeebandit.com/app-library/vehicle-maintenance) app.
+
 Service history plus annual renewal reminders (registration, inspection,
 insurance) for every household vehicle.
 
