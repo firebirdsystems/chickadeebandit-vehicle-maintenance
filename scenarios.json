@@ -1,0 +1,165 @@
+{
+  "scenarios": [
+    {
+      "name": "a teen can read the vehicles and service history, but only adults log service or add renewals",
+      "members": { "parent": "adult", "teen": "child" },
+      "steps": [
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, created_by, created_at) VALUES ('v1', 'Blue Subaru', 'Subaru Outback', 2019, ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES ('s1', 'v1', '2026-01-02', 'Oil change', 42000, 6500, ?, '2026-01-02T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "teen",
+          "sql": "SELECT v.name, s.title, s.cost_cents FROM app_vehicle_maintenance__service_log s JOIN app_vehicle_maintenance__vehicles v ON v.id = s.vehicle_id",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "name": "Blue Subaru", "title": "Oil change", "cost_cents": 6500 }] }
+        },
+        {
+          "action": "db",
+          "as": "teen",
+          "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, created_by, created_at) VALUES ('s2', 'v1', '2026-01-03', 'Car wash', ?, '2026-01-03T00:00:00Z')",
+          "params": ["{{teen}}"],
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "db",
+          "as": "teen",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, created_at, updated_at) VALUES ('rn1', 'v1', ?, 'registration', 'Registration', 3, 15, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{teen}}"],
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "db",
+          "as": "teen",
+          "sql": "UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = 'v1'",
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT id, archived FROM app_vehicle_maintenance__vehicles",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "id": "v1", "archived": 0 }] }
+        }
+      ]
+    },
+    {
+      "name": "a renewal's month, day, and lead time are range-checked",
+      "members": { "parent": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, created_by, created_at) VALUES ('v1', 'Blue Subaru', ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"]
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, created_at, updated_at) VALUES ('bad-month', 'v1', ?, 'registration', 'Registration', 13, 1, 14, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 400 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, created_at, updated_at) VALUES ('bad-day', 'v1', ?, 'registration', 'Registration', 2, 32, 14, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 400 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, created_at, updated_at) VALUES ('bad-lead', 'v1', ?, 'registration', 'Registration', 2, 1, -1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 400 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, created_at, updated_at) VALUES ('ok', 'v1', ?, 'registration', 'Registration', 12, 31, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "parent",
+          "sql": "SELECT id FROM app_vehicle_maintenance__renewals",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "id": "ok" }] }
+        }
+      ]
+    },
+    {
+      "name": "AI exports return vehicles, newest service first, and renewals in calendar order",
+      "members": { "parent": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, model_year, created_by, created_at) VALUES ('v1', 'Blue Subaru', 2019, ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, cost_cents, created_by, created_at) VALUES ('s-old', 'v1', '2025-06-01', 'Tires', 60000, ?, '2025-06-01T00:00:00Z'), ('s-new', 'v1', '2026-01-02', 'Oil change', 6500, ?, '2026-01-02T00:00:00Z')",
+          "params": ["{{parent}}", "{{parent}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, created_at, updated_at) VALUES ('rn-nov', 'v1', ?, 'insurance', 'Insurance', 11, 1, 30, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'), ('rn-mar', 'v1', ?, 'registration', 'Registration', 3, 15, 14, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+          "params": ["{{parent}}", "{{parent}}"]
+        },
+        {
+          "action": "named",
+          "as": "parent",
+          "kind": "query",
+          "name": "vehicles",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "id": "v1", "name": "Blue Subaru", "model_year": 2019 }] }
+        },
+        {
+          "action": "named",
+          "as": "parent",
+          "kind": "query",
+          "name": "recent_service",
+          "expect": { "status": 200, "rowCount": 2, "rowsContain": [{ "id": "s-new", "cost_cents": 6500 }, { "id": "s-old", "cost_cents": 60000 }] }
+        },
+        {
+          "action": "named",
+          "as": "parent",
+          "kind": "query",
+          "name": "upcoming_renewals",
+          "expect": { "status": 200, "rowCount": 2, "rowsContain": [{ "id": "rn-mar", "kind": "registration", "event_month": 3 }, { "id": "rn-nov", "kind": "insurance", "event_month": 11 }] }
+        }
+      ]
+    },
+    {
+      "name": "only adults may publish vehicle service and renewal events",
+      "members": { "parent": "adult", "teen": "child" },
+      "steps": [
+        {
+          "action": "publish",
+          "as": "teen",
+          "type": "vehicle.service_logged",
+          "subject_id": "s1",
+          "payload": { "vehicle_id": "v1", "service_date": "2026-01-02", "odometer": 42000, "cost_cents": 6500 },
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "publish",
+          "as": "parent",
+          "type": "vehicle.service_logged",
+          "subject_id": "s1",
+          "payload": { "vehicle_id": "v1", "service_date": "2026-01-02", "odometer": 42000, "cost_cents": 6500 },
+          "expect": { "status": 201 }
+        }
+      ]
+    }
+  ]
+}
