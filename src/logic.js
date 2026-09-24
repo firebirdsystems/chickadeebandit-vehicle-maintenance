@@ -105,7 +105,7 @@ export function searchableFields(item) {
 
 /* ── Calendar automation helpers ───────────────────────────────────────────────
  * Two separate lanes hang off a renewal, and they are not the same thing.
- * `date_reminders` (see manifest.json) is the hub's premium EMAIL lane: cron
+ * `date_reminders` (see manifest.json) is the hub's EMAIL lane: cron
  * reads event_month/event_day/lead_days straight off the row and sends a
  * message. It is untouched by anything below. These helpers feed the OTHER
  * lane — the `vehicle.renewal_added` event an automation rule turns into a
