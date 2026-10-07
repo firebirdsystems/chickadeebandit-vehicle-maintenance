@@ -4,16 +4,16 @@
  */
 
 export const RENEWAL_KINDS = [
-  { value: "registration", label: "Registration", icon: "📋" },
-  { value: "inspection",   label: "Inspection",   icon: "🔧" },
-  { value: "insurance",    label: "Insurance",    icon: "🛡️" },
-  { value: "other",        label: "Other",        icon: "📌" },
+  { value: "registration", label: "Registration", icon: "📋", glyph: "license-plate" },
+  { value: "inspection",   label: "Inspection",   icon: "🔧", glyph: "wrench" },
+  { value: "insurance",    label: "Insurance",    icon: "🛡️", glyph: "shield" },
+  { value: "other",        label: "Other",        icon: "📌", glyph: "pinboard" },
 ];
 
 const KIND_BY_VALUE = new Map(RENEWAL_KINDS.map((k) => [k.value, k]));
 
 export function kindMeta(kind) {
-  return KIND_BY_VALUE.get(kind) ?? { value: "other", label: "Other", icon: "📌" };
+  return KIND_BY_VALUE.get(kind) ?? { value: "other", label: "Other", icon: "📌", glyph: "pinboard" };
 }
 
 /** Days in a given month (1-12) of a given year, honoring leap years. */

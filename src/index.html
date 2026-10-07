@@ -112,7 +112,7 @@
 </div>
 
 <script type="module">
-import { esc, isAdult, hubConfirm, fmtMoney, searchMatch, hubToday } from "/hub-sdk.js";
+import { esc, isAdult, hubConfirm, fmtMoney, searchMatch, hubToday, glyph } from "/hub-sdk.js";
 
 // The household's calendar day as a Date, for the pure helpers in logic.js.
 // Those helpers default their date parameter to `new Date()` — the VIEWER
@@ -465,7 +465,7 @@ function render() {
   root.innerHTML = `
     <div class="topbar">
       <div>
-        <h1>🚗 ${esc(vehicle.name)}</h1>
+        <h1>${glyph("car")} ${esc(vehicle.name)}</h1>
         <p class="muted tiny">${esc([vehicle.make_model, vehicle.model_year, vehicle.plate].filter(Boolean).join(" · "))}</p>
       </div>
       ${canManage() ? `
@@ -490,7 +490,7 @@ function render() {
       const meta = kindMeta(r.kind);
       return `
         <div class="row">
-          <div class="row-icon" aria-hidden="true">${meta.icon}</div>
+          <div class="row-icon" aria-hidden="true">${glyph(meta.glyph)}</div>
           <div class="row-body">
             <div class="row-title">${esc(r.title || meta.label)}</div>
             <div class="row-meta">${esc(meta.label)} · reminds ${esc(String(Number(r.lead_days) || 0))} days before${r.notes ? ` · ${esc(r.notes)}` : ""}</div>
@@ -509,7 +509,7 @@ function render() {
     ${log.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search the service log…" aria-label="Search the service log" value="${esc(searchQ)}" /></div>` : ""}
     ${shownLog.length ? `<div class="stack">${shownLog.map((s) => `
       <div class="row">
-        <div class="row-icon" aria-hidden="true">🔧</div>
+        <div class="row-icon" aria-hidden="true">${glyph("wrench")}</div>
         <div class="row-body">
           <div class="row-title">${esc(s.title)}</div>
           <div class="row-meta">
