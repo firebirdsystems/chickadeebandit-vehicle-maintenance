@@ -1,0 +1,377 @@
+{
+ "seed": [
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, plate, notes, archived, created_by, created_at) VALUES (?, ?, ?, 2019, ?, ?, 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-60 days'))",
+   "params": [
+    "vm-v1",
+    "Blue Subaru",
+    "Subaru Outback",
+    "KLM 4821",
+    "Synthetic oil only. Spare key in the kitchen drawer.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, plate, archived, created_by, created_at) VALUES (?, ?, ?, 2016, ?, 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days'))",
+   "params": [
+    "vm-v2",
+    "Grey Minivan",
+    "Honda Odyssey",
+    "HTR 2290",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, plate, notes, archived, created_by, created_at) VALUES (?, ?, ?, 2012, ?, ?, 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days'))",
+   "params": [
+    "vm-v3",
+    "Pickup",
+    "Ford F-150",
+    "TRK 0714",
+    "Used for dump runs and the boat trailer.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__vehicles (id, name, make_model, model_year, plate, archived, created_by, created_at) VALUES (?, ?, ?, 2010, ?, 0, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days'))",
+   "params": [
+    "vm-v4",
+    "Teen's Civic",
+    "Honda Civic",
+    "CVC 5536",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-6 days'), ?, 61240, 7499, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days'))",
+   "params": [
+    "vm-s1",
+    "vm-v1",
+    "Oil change",
+    "Full synthetic, new filter.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-48 days'), ?, 58900, 3500, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-48 days'))",
+   "params": [
+    "vm-s2",
+    "vm-v1",
+    "Tire rotation",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-95 days'), ?, 56310, 28900, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-95 days'))",
+   "params": [
+    "vm-s3",
+    "vm-v1",
+    "Brake pads, front",
+    "Rotors resurfaced.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-160 days'), ?, 53800, 2400, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-160 days'))",
+   "params": [
+    "vm-s4",
+    "vm-v1",
+    "Cabin air filter",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-230 days'), ?, 51020, 7299, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-230 days'))",
+   "params": [
+    "vm-s5",
+    "vm-v1",
+    "Oil change",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-310 days'), ?, 47650, 18900, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-310 days'))",
+   "params": [
+    "vm-s6",
+    "vm-v1",
+    "New battery",
+    "Three year warranty.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-12 days'), ?, 98410, 3500, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-12 days'))",
+   "params": [
+    "vm-s7",
+    "vm-v2",
+    "State inspection",
+    "Passed.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-40 days'), ?, 97300, 6499, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-40 days'))",
+   "params": [
+    "vm-s8",
+    "vm-v2",
+    "Oil change",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-88 days'), ?, 95120, 41000, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88 days'))",
+   "params": [
+    "vm-s9",
+    "vm-v2",
+    "Sliding door track repair",
+    "Driver side.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-140 days'), ?, 93000, 74000, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-140 days'))",
+   "params": [
+    "vm-s10",
+    "vm-v2",
+    "New tires",
+    "All four, all season.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-210 days'), ?, 90400, 16500, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-210 days'))",
+   "params": [
+    "vm-s11",
+    "vm-v2",
+    "Transmission fluid",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-290 days'), ?, 87100, 3200, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-290 days'))",
+   "params": [
+    "vm-s12",
+    "vm-v2",
+    "Wiper blades",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-20 days'), ?, 142800, 8200, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-20 days'))",
+   "params": [
+    "vm-s13",
+    "vm-v3",
+    "Oil change",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-75 days'), ?, 141500, 12000, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-75 days'))",
+   "params": [
+    "vm-s14",
+    "vm-v3",
+    "Trailer hitch wiring",
+    "Seven pin connector replaced.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-150 days'), ?, 139200, 21000, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-150 days'))",
+   "params": [
+    "vm-s15",
+    "vm-v3",
+    "Spark plugs",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-260 days'), ?, 135600, 9900, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-260 days'))",
+   "params": [
+    "vm-s16",
+    "vm-v3",
+    "Front alignment",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-340 days'), ?, 132000, 13500, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-340 days'))",
+   "params": [
+    "vm-s17",
+    "vm-v3",
+    "Coolant flush",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-3 days'), ?, 118900, 31000, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days'))",
+   "params": [
+    "vm-s18",
+    "vm-v4",
+    "Wheel bearing, rear left",
+    "Humming noise gone.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-55 days'), ?, 117400, 4999, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55 days'))",
+   "params": [
+    "vm-s19",
+    "vm-v4",
+    "Oil change",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, created_by, created_at) VALUES (?, ?, date('now','-130 days'), ?, 115000, 9000, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-130 days'))",
+   "params": [
+    "vm-s20",
+    "vm-v4",
+    "Brake fluid",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-200 days'), ?, 112700, 2800, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-200 days'))",
+   "params": [
+    "vm-s21",
+    "vm-v4",
+    "Headlight bulbs",
+    "Did it ourselves.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?, ?, date('now','-280 days'), ?, 109300, 62000, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-280 days'))",
+   "params": [
+    "vm-s22",
+    "vm-v4",
+    "Timing belt",
+    "Water pump replaced at the same time.",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+9 days') AS INTEGER), CAST(strftime('%d','now','+9 days') AS INTEGER), 14, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r1",
+    "vm-v1",
+    "{{me}}",
+    "registration",
+    "Registration",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+45 days') AS INTEGER), CAST(strftime('%d','now','+45 days') AS INTEGER), 30, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r2",
+    "vm-v1",
+    "{{me}}",
+    "insurance",
+    "Insurance renewal",
+    "everyone",
+    "Policy with the bundled home discount."
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+120 days') AS INTEGER), CAST(strftime('%d','now','+120 days') AS INTEGER), 14, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r3",
+    "vm-v1",
+    "{{me}}",
+    "inspection",
+    "State inspection",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+70 days') AS INTEGER), CAST(strftime('%d','now','+70 days') AS INTEGER), 14, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r4",
+    "vm-v2",
+    "{{me}}",
+    "registration",
+    "Registration",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+200 days') AS INTEGER), CAST(strftime('%d','now','+200 days') AS INTEGER), 14, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r5",
+    "vm-v2",
+    "{{me}}",
+    "inspection",
+    "State inspection",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+45 days') AS INTEGER), CAST(strftime('%d','now','+45 days') AS INTEGER), 30, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r6",
+    "vm-v2",
+    "{{me}}",
+    "insurance",
+    "Insurance renewal",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+3 days') AS INTEGER), CAST(strftime('%d','now','+3 days') AS INTEGER), 7, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r7",
+    "vm-v3",
+    "{{me}}",
+    "registration",
+    "Registration",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+150 days') AS INTEGER), CAST(strftime('%d','now','+150 days') AS INTEGER), 14, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r8",
+    "vm-v3",
+    "{{me}}",
+    "other",
+    "Trailer permit",
+    "everyone",
+    "County office, cash only."
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+250 days') AS INTEGER), CAST(strftime('%d','now','+250 days') AS INTEGER), 14, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r9",
+    "vm-v4",
+    "{{me}}",
+    "registration",
+    "Registration",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+25 days') AS INTEGER), CAST(strftime('%d','now','+25 days') AS INTEGER), 7, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r10",
+    "vm-v4",
+    "{{me}}",
+    "inspection",
+    "State inspection",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CAST(strftime('%m','now','+300 days') AS INTEGER), CAST(strftime('%d','now','+300 days') AS INTEGER), 30, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days'))",
+   "params": [
+    "vm-r11",
+    "vm-v4",
+    "{{me}}",
+    "insurance",
+    "Insurance renewal",
+    "everyone"
+   ]
+  }
+ ]
+}
