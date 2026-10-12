@@ -243,7 +243,7 @@ async function saveVehicle(fields, existingId) {
     try {
       await db("UPDATE app_vehicle_maintenance__vehicles SET name=?, make_model=?, model_year=?, plate=?, notes=? WHERE id=?",
         [fields.name, fields.make_model, fields.model_year, fields.plate, fields.notes, existingId]);
-    } catch (e) { if (idx !== -1 && prev) vehicles[idx] = prev; showError(e.message); }
+    } catch (e) { if (idx !== -1 && prev) vehicles[idx] = prev; console.error(e); showError("Couldn’t save the vehicle — try again."); }
   } else {
     const row = { id: crypto.randomUUID(), ...fields, archived: 0, created_by: me.id, created_at: now };
     vehicles = [...vehicles, row];
@@ -255,7 +255,7 @@ async function saveVehicle(fields, existingId) {
     } catch (e) {
       vehicles = vehicles.filter((v) => v.id !== row.id);
       currentVehicleId = vehicles[0]?.id ?? null;
-      showError(e.message);
+      console.error(e); showError("Couldn’t add the vehicle — try again.");
     }
   }
 }
@@ -273,7 +273,7 @@ async function archiveVehicle(id) {
     // another app and would keep showing a registration for a car the household
     // no longer has. Retract each one by the reference that made it.
     for (const r of renewals.filter((r) => r.vehicle_id === id)) await retractRenewal(r, "vehicle_archived");
-  } catch (e) { vehicles = prev; showError(e.message); }
+  } catch (e) { vehicles = prev; console.error(e); showError("Couldn’t archive the vehicle — try again."); }
 }
 
 async function saveService(fields, existingId) {
@@ -286,7 +286,7 @@ async function saveService(fields, existingId) {
     try {
       await db("UPDATE app_vehicle_maintenance__service_log SET service_date=?, title=?, odometer=?, cost_cents=?, notes=? WHERE id=?",
         [fields.service_date, fields.title, fields.odometer, fields.cost_cents, fields.notes, existingId]);
-    } catch (e) { if (idx !== -1 && prev) serviceLog[idx] = prev; showError(e.message); }
+    } catch (e) { if (idx !== -1 && prev) serviceLog[idx] = prev; console.error(e); showError("Couldn’t save the service entry — try again."); }
   } else {
     const row = { id: crypto.randomUUID(), vehicle_id: currentVehicleId, ...fields, created_by: me.id, created_at: now };
     serviceLog = [row, ...serviceLog];
@@ -300,7 +300,7 @@ async function saveService(fields, existingId) {
         odometer: row.odometer,
         cost_cents: row.cost_cents,
       });
-    } catch (e) { serviceLog = serviceLog.filter((s) => s.id !== row.id); showError(e.message); }
+    } catch (e) { serviceLog = serviceLog.filter((s) => s.id !== row.id); console.error(e); showError("Couldn’t add the service entry — try again."); }
   }
 }
 
@@ -311,7 +311,7 @@ async function deleteService(id) {
   serviceLog = serviceLog.filter((s) => s.id !== id);
   closeModal(); render();
   try { await db("DELETE FROM app_vehicle_maintenance__service_log WHERE id = ?", [id]); }
-  catch (e) { serviceLog = prev; showError(e.message); }
+  catch (e) { serviceLog = prev; console.error(e); showError("Couldn’t delete the service entry — try again."); }
 }
 
 /**
@@ -395,7 +395,7 @@ async function saveRenewal(fields, existingId) {
       // able to correct it. The guard keeps a notes-only edit from spending an
       // automation run to rewrite an entry it cannot change.
       if (idx !== -1 && renewalInputsChanged(prev, renewals[idx])) await announceRenewal(renewals[idx]);
-    } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; showError(e.message); }
+    } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; console.error(e); showError("Couldn’t save the renewal — try again."); }
   } else {
     const row = {
       id: crypto.randomUUID(), vehicle_id: currentVehicleId, member_id: me.id,
@@ -407,7 +407,7 @@ async function saveRenewal(fields, existingId) {
       await db("INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [row.id, row.vehicle_id, row.member_id, row.kind, row.title, row.event_month, row.event_day, row.lead_days, row.visibility, row.notes, now, now]);
       await announceRenewal(row);
-    } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); showError(e.message); }
+    } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); console.error(e); showError("Couldn’t add the renewal — try again."); }
   }
 }
 
@@ -421,7 +421,7 @@ async function deleteRenewal(id) {
   try {
     await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]);
     if (doomed) await retractRenewal(doomed, "deleted");
-  } catch (e) { renewals = prev; showError(e.message); }
+  } catch (e) { renewals = prev; console.error(e); showError("Couldn’t delete the renewal — try again."); }
 }
 
 /* ── Rendering ─────────────────────────────────────────────────────────────── */
@@ -589,7 +589,7 @@ function openVehicleEditor(existing) {
       model_year: yearRaw ? Number(yearRaw) : null,
       plate: document.getElementById("v-plate").value.trim(),
       notes: document.getElementById("v-notes").value.trim(),
-    }, v?.id ?? null).catch((err) => showError(err.message));
+    }, v?.id ?? null).catch((err) => { console.error(err); showError("Couldn’t save the vehicle — try again."); });
   });
 }
 
@@ -632,7 +632,7 @@ function openServiceEditor(existing) {
       odometer: odoRaw ? Number(odoRaw) : null,
       cost_cents: cost,
       notes: document.getElementById("s-notes").value.trim(),
-    }, s?.id ?? null).catch((err) => showError(err.message));
+    }, s?.id ?? null).catch((err) => { console.error(err); showError("Couldn’t save the service entry — try again."); });
   });
 }
 
@@ -676,7 +676,7 @@ function openRenewalEditor(existing) {
       event_day: Number(m[3]),
       lead_days: Number(document.getElementById("r-lead").value) || 0,
       notes: document.getElementById("r-notes").value.trim(),
-    }, r?.id ?? null).catch((err) => showError(err.message));
+    }, r?.id ?? null).catch((err) => { console.error(err); showError("Couldn’t save the renewal — try again."); });
   });
 }
 
