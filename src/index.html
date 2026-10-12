@@ -80,6 +80,8 @@
     .stat .k { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; }
     .empty { color: var(--muted); text-align: center; padding: 30px 16px; }
     .error { background: var(--red-soft); color: var(--red); padding: 9px 12px; border-radius: 8px; margin-bottom: 10px; font-size: .86rem; }
+    .load-error { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.9rem; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .load-error-retry { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 5px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; flex-shrink: 0; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.42); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
     .modal { background: var(--surface); border-radius: 14px; padding: 22px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,.25); max-height: 92vh; overflow-y: auto; }
     .modal h2 { font-size: 1.05rem; margin-bottom: 16px; }
@@ -158,6 +160,7 @@ let renewals = [];
 let currentVehicleId = null;
 let searchQ = "";       // in-app search (see logic.js searchableFields)
 let error = "";
+let loadFailed = false; // first load failed; cleared when a load succeeds
 let modalEl = null;
 
 function nowIso() { return new Date().toISOString(); }
@@ -171,8 +174,8 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error(json?.error || "Couldn’t reach the hub. Try again.");
   return json;
 }
 
@@ -181,10 +184,14 @@ async function loadMembers() {
   if (!CONTEXT) {
     members = [{ id: "demo-1", name: "Alex", role: "adult" }, { id: "demo-2", name: "Casey", role: "child" }];
   } else {
-    try {
-      const res = await fetch(`${CONTEXT}?keys=family.members`);
-      members = ((await res.json())["family.members"]) ?? [];
-    } catch { members = []; }
+    // A roster that could not be read is a failed load, not an empty household.
+    const res = await fetch(`${CONTEXT}?keys=family.members`);
+    if (!res.ok) throw new Error(`context ${res.status}`);
+    const json = await res.json();
+    if (!json || typeof json !== "object") throw new Error("context: unexpected response");
+    // The hub answers 200 and names a key it could not resolve in `$errors`.
+    if (Array.isArray(json.$errors) && json.$errors.includes("family.members")) throw new Error("context: family.members did not resolve");
+    members = json["family.members"] ?? [];
   }
   memberMap = new Map(members.map((m) => [m.id, m]));
   me = HUB_MEMBER ?? members[0] ?? { id: "guest", name: "Guest", role: "adult" };
@@ -217,9 +224,10 @@ async function refresh() {
   error = "";
   try {
     await Promise.all([loadMembers(), loadData()]);
+    loadFailed = false;
     if (!currentVehicleId || !vehicles.some((v) => v.id === currentVehicleId)) currentVehicleId = vehicles[0]?.id ?? null;
     render();
-  } catch (e) { error = e.message; render(); }
+  } catch { loadFailed = true; render(); }
 }
 
 function showError(msg) { error = msg; render(); }
@@ -443,6 +451,14 @@ document.addEventListener("input", (e) => {
 function render() {
   const root = document.getElementById("root");
   root.className = "app-root";
+
+  // Nothing was read: no "No vehicles yet", and nothing to add onto.
+  if (loadFailed) {
+    root.innerHTML = `
+      <div class="topbar"><h1>Vehicles</h1></div>
+      <div class="load-error" data-testid="load-error" role="alert"><span>Couldn’t load vehicles.</span> <button type="button" class="load-error-retry" data-testid="load-retry">Try again</button></div>`;
+    return;
+  }
 
   if (!vehicles.length) {
     root.innerHTML = `
@@ -668,6 +684,7 @@ function openRenewalEditor(existing) {
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) return;
+  if (t.matches('[data-testid="load-retry"]')) { refresh(); return; }
   if (t.hasAttribute("data-vehicle")) { currentVehicleId = t.getAttribute("data-vehicle"); render(); return; }
   if (t.hasAttribute("data-cancel")) { closeModal(); return; }
   if (t.hasAttribute("data-add-vehicle")) { openVehicleEditor(null); return; }
