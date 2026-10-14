@@ -130,6 +130,7 @@ import {
   RENEWAL_KINDS, kindMeta, upcomingRenewals, countdownLabel, sortedLog,
   totalCostCents, parseMoneyToCents, latestOdometer, searchableFields,
   nextRenewalDate, remindOnDate, renewalReviewTitle, renewalSummary, renewalInputsChanged,
+  outcomeUnknown, storedDiffers, SAVED_AS_FIRST, failureLine,
 } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -175,9 +176,24 @@ async function db(sql, params = []) {
     body: JSON.stringify({ sql, params }),
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error(json?.error || "Couldn’t reach the hub. Try again.");
+  if (!res.ok || !json || typeof json !== "object" || json.error) throw Object.assign(new Error(json?.error || "Couldn’t reach the hub. Try again."), { status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
   return json;
 }
+
+function userError(msg) { return Object.assign(new Error(msg), { forUser: true }); }
+
+/**
+ * A write that changed nothing: re-read the row so the line can say "removed"
+ * (gone) or "permission" (still there — the hub narrowed the write). The
+ * line is thrown as the app's own words for the write's catch to show.
+ */
+async function changedNothing(table, id, words) {
+  let found = null;
+  try { found = !!(await db(`SELECT id FROM ${table} WHERE id = ?`, [id])).rows?.[0]; }
+  catch (readErr) { console.error(readErr); }
+  return userError(failureLine(null, { ...words, found }));
+}
+const unchanged = (result) => DB && Number(result?.changed ?? 0) === 0;
 
 /* ── Loading ───────────────────────────────────────────────────────────────── */
 async function loadMembers() {
@@ -231,8 +247,25 @@ async function refresh() {
 }
 
 function showError(msg) { error = msg; render(); }
+// A failure said inside the open dialog it belongs to (the page's own line sits
+// behind the overlay); with that dialog gone, on the page instead.
+function showFormError(host, msg) {
+  const actions = host?.isConnected ? host.querySelector(".modal-actions") : null;
+  if (!actions) return showError(msg);
+  host.querySelector(".form-error")?.remove();
+  const box = document.createElement("div");
+  box.className = "error form-error"; box.setAttribute("role", "alert"); box.textContent = msg;
+  actions.before(box);
+}
 
 /* ── Mutations ─────────────────────────────────────────────────────────────── */
+const VEHICLE_SAVE = { action: "save the vehicle", thing: "vehicle" };
+const VEHICLE_ARCHIVE = { action: "archive the vehicle", thing: "vehicle" };
+const SERVICE_SAVE = { action: "save the service entry", thing: "service entry" };
+const SERVICE_DELETE = { action: "delete the service entry", thing: "service entry" };
+const RENEWAL_SAVE = { action: "save the renewal", thing: "renewal" };
+const RENEWAL_DELETE = { action: "delete the renewal", thing: "renewal" };
+
 async function saveVehicle(fields, existingId) {
   const now = nowIso();
   if (existingId) {
@@ -241,9 +274,10 @@ async function saveVehicle(fields, existingId) {
     if (idx !== -1) vehicles[idx] = { ...vehicles[idx], ...fields };
     closeModal(); render();
     try {
-      await db("UPDATE app_vehicle_maintenance__vehicles SET name=?, make_model=?, model_year=?, plate=?, notes=? WHERE id=?",
+      const result = await db("UPDATE app_vehicle_maintenance__vehicles SET name=?, make_model=?, model_year=?, plate=?, notes=? WHERE id=?",
         [fields.name, fields.make_model, fields.model_year, fields.plate, fields.notes, existingId]);
-    } catch (e) { if (idx !== -1 && prev) vehicles[idx] = prev; console.error(e); showError("Couldn’t save the vehicle — try again."); }
+      if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__vehicles", existingId, VEHICLE_SAVE);
+    } catch (e) { if (idx !== -1 && prev) vehicles[idx] = prev; console.error(e); showError(failureLine(e, VEHICLE_SAVE)); }
   } else {
     const row = { id: crypto.randomUUID(), ...fields, archived: 0, created_by: me.id, created_at: now };
     vehicles = [...vehicles, row];
@@ -255,7 +289,7 @@ async function saveVehicle(fields, existingId) {
     } catch (e) {
       vehicles = vehicles.filter((v) => v.id !== row.id);
       currentVehicleId = vehicles[0]?.id ?? null;
-      console.error(e); showError("Couldn’t add the vehicle — try again.");
+      console.error(e); showError(failureLine(e, { action: "add the vehicle", thing: "vehicle" }));
     }
   }
 }
@@ -268,12 +302,13 @@ async function archiveVehicle(id) {
   if (currentVehicleId === id) currentVehicleId = vehicles[0]?.id ?? null;
   closeModal(); render();
   try {
-    await db("UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = ?", [id]);
+    const result = await db("UPDATE app_vehicle_maintenance__vehicles SET archived = 1 WHERE id = ?", [id]);
+    if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__vehicles", id, VEHICLE_ARCHIVE);
     // Archiving hides the vehicle's renewals here, but a calendar entry lives in
     // another app and would keep showing a registration for a car the household
     // no longer has. Retract each one by the reference that made it.
     for (const r of renewals.filter((r) => r.vehicle_id === id)) await retractRenewal(r, "vehicle_archived");
-  } catch (e) { vehicles = prev; console.error(e); showError("Couldn’t archive the vehicle — try again."); }
+  } catch (e) { vehicles = prev; console.error(e); showError(failureLine(e, VEHICLE_ARCHIVE)); }
 }
 
 async function saveService(fields, existingId) {
@@ -284,23 +319,60 @@ async function saveService(fields, existingId) {
     if (idx !== -1) serviceLog[idx] = { ...serviceLog[idx], ...fields };
     closeModal(); render();
     try {
-      await db("UPDATE app_vehicle_maintenance__service_log SET service_date=?, title=?, odometer=?, cost_cents=?, notes=? WHERE id=?",
+      const result = await db("UPDATE app_vehicle_maintenance__service_log SET service_date=?, title=?, odometer=?, cost_cents=?, notes=? WHERE id=?",
         [fields.service_date, fields.title, fields.odometer, fields.cost_cents, fields.notes, existingId]);
-    } catch (e) { if (idx !== -1 && prev) serviceLog[idx] = prev; console.error(e); showError("Couldn’t save the service entry — try again."); }
+      if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__service_log", existingId, SERVICE_SAVE);
+    } catch (e) { if (idx !== -1 && prev) serviceLog[idx] = prev; console.error(e); showError(failureLine(e, SERVICE_SAVE)); }
   } else {
-    const row = { id: crypto.randomUUID(), vehicle_id: currentVehicleId, ...fields, created_by: me.id, created_at: now };
-    serviceLog = [row, ...serviceLog];
-    closeModal(); render();
+    // The id is the open form's, minted on its first Log it and sent on every
+    // retry: a try whose answer was lost may have stored the entry, and a
+    // second press must find it rather than log the cost twice. The form stays
+    // open until the hub has the row.
+    const host = modalEl;
+    const id = host ? (host.dataset.rowId ||= crypto.randomUUID()) : crypto.randomUUID();
+    const typed = { vehicle_id: currentVehicleId, ...fields };
+    let row = { id, ...typed, created_by: me.id, created_at: now };
+    let note = "";
     try {
-      await db("INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-        [row.id, row.vehicle_id, row.service_date, row.title, row.odometer, row.cost_cents, row.notes, row.created_by, row.created_at]);
-      await publishEvent("vehicle.service_logged", row.id, {
-        vehicle_id: row.vehicle_id,
-        service_date: row.service_date,
-        odometer: row.odometer,
-        cost_cents: row.cost_cents,
-      });
-    } catch (e) { serviceLog = serviceLog.filter((s) => s.id !== row.id); console.error(e); showError("Couldn’t add the service entry — try again."); }
+      try {
+        await db("INSERT INTO app_vehicle_maintenance__service_log (id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+          [row.id, row.vehicle_id, row.service_date, row.title, row.odometer, row.cost_cents, row.notes, row.created_by, row.created_at]);
+      } catch (e) {
+        // Unknown outcome: read the entry back by the pinned id. Found means an
+        // earlier try landed and its success path never ran, so it runs now,
+        // once. Not found, or the read failed: the add fails, the id stays pinned.
+        if (!outcomeUnknown(e)) throw e;
+        let stored = null;
+        try { stored = (await db("SELECT id, vehicle_id, service_date, title, odometer, cost_cents, notes, created_by, created_at FROM app_vehicle_maintenance__service_log WHERE id = ?", [id])).rows?.[0] ?? null; }
+        catch (readErr) {
+          // The id is ours: with the read-back failed, a UNIQUE answer may be this
+          // form's own first try, so nothing is known — "try again", not "already exists".
+          console.error(readErr);
+          throw new Error("service entry outcome unknown", { cause: e });
+        }
+        if (!stored) throw e;
+        console.error(e);
+        // Edited since that first try: what was stored is kept, and said so.
+        if (storedDiffers(stored, typed)) note = SAVED_AS_FIRST;
+        row = stored;
+      }
+    } catch (e) {
+      console.error(e);
+      const btn = host?.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = "Log it"; }
+      showFormError(host, failureLine(e, { action: "add the service entry", thing: "service entry" }));
+      return;
+    }
+    if (host) delete host.dataset.rowId;
+    serviceLog = [row, ...serviceLog.filter((s) => s.id !== row.id)];
+    if (modalEl === host) closeModal();
+    showError(note);
+    await publishEvent("vehicle.service_logged", row.id, {
+      vehicle_id: row.vehicle_id,
+      service_date: row.service_date,
+      odometer: row.odometer,
+      cost_cents: row.cost_cents,
+    });
   }
 }
 
@@ -310,8 +382,10 @@ async function deleteService(id) {
   const prev = serviceLog;
   serviceLog = serviceLog.filter((s) => s.id !== id);
   closeModal(); render();
-  try { await db("DELETE FROM app_vehicle_maintenance__service_log WHERE id = ?", [id]); }
-  catch (e) { serviceLog = prev; console.error(e); showError("Couldn’t delete the service entry — try again."); }
+  try {
+    const result = await db("DELETE FROM app_vehicle_maintenance__service_log WHERE id = ?", [id]);
+    if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__service_log", id, SERVICE_DELETE);
+  } catch (e) { serviceLog = prev; console.error(e); showError(failureLine(e, SERVICE_DELETE)); }
 }
 
 /**
@@ -388,14 +462,15 @@ async function saveRenewal(fields, existingId) {
     if (idx !== -1) renewals[idx] = { ...renewals[idx], ...fields, updated_at: now };
     closeModal(); render();
     try {
-      await db("UPDATE app_vehicle_maintenance__renewals SET kind=?, title=?, event_month=?, event_day=?, lead_days=?, notes=?, updated_at=? WHERE id=?",
+      const result = await db("UPDATE app_vehicle_maintenance__renewals SET kind=?, title=?, event_month=?, event_day=?, lead_days=?, notes=?, updated_at=? WHERE id=?",
         [fields.kind, fields.title, fields.event_month, fields.event_day, fields.lead_days, fields.notes, now, existingId]);
+      if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__renewals", existingId, RENEWAL_SAVE);
       // Editing used to publish nothing, so moving a renewal from March to
       // September left last March's entry standing on the calendar with nothing
       // able to correct it. The guard keeps a notes-only edit from spending an
       // automation run to rewrite an entry it cannot change.
       if (idx !== -1 && renewalInputsChanged(prev, renewals[idx])) await announceRenewal(renewals[idx]);
-    } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; console.error(e); showError("Couldn’t save the renewal — try again."); }
+    } catch (e) { if (idx !== -1 && prev) renewals[idx] = prev; console.error(e); showError(failureLine(e, RENEWAL_SAVE)); }
   } else {
     const row = {
       id: crypto.randomUUID(), vehicle_id: currentVehicleId, member_id: me.id,
@@ -407,7 +482,7 @@ async function saveRenewal(fields, existingId) {
       await db("INSERT INTO app_vehicle_maintenance__renewals (id, vehicle_id, member_id, kind, title, event_month, event_day, lead_days, visibility, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [row.id, row.vehicle_id, row.member_id, row.kind, row.title, row.event_month, row.event_day, row.lead_days, row.visibility, row.notes, now, now]);
       await announceRenewal(row);
-    } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); console.error(e); showError("Couldn’t add the renewal — try again."); }
+    } catch (e) { renewals = renewals.filter((r) => r.id !== row.id); console.error(e); showError(failureLine(e, { action: "add the renewal", thing: "renewal" })); }
   }
 }
 
@@ -419,9 +494,10 @@ async function deleteRenewal(id) {
   closeModal(); render();
   const doomed = prev.find((r) => r.id === id);
   try {
-    await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]);
+    const result = await db("DELETE FROM app_vehicle_maintenance__renewals WHERE id = ?", [id]);
+    if (unchanged(result)) throw await changedNothing("app_vehicle_maintenance__renewals", id, RENEWAL_DELETE);
     if (doomed) await retractRenewal(doomed, "deleted");
-  } catch (e) { renewals = prev; console.error(e); showError("Couldn’t delete the renewal — try again."); }
+  } catch (e) { renewals = prev; console.error(e); showError(failureLine(e, RENEWAL_DELETE)); }
 }
 
 /* ── Rendering ─────────────────────────────────────────────────────────────── */
